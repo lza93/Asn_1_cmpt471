@@ -33,7 +33,11 @@ int main(int argc, char **argv)
         printf("usage: %s <IPaddress and port>", argv[0]);
         exit(1);
     }
+
+    /* No tunnel using case*/
     if (argc==3){
+
+        /* hostname input case*/
         if(!isValidIpAddress(server_name)){
         hostname_to_ip(server_name, port_num, hostIp, recvline);
         printf("hostname:%s\nIpaddress:%s\n",server_name, hostIp);
@@ -42,6 +46,8 @@ int main(int argc, char **argv)
             exit(1);
         }
         }
+
+        /* ip input case*/
         else
         {
             ip_to_hostname(server_name, port_num, hostName, service, recvline);
@@ -90,12 +96,16 @@ int main(int argc, char **argv)
     exit(0);
     }
     #endif
+
+/* check if the input is an ip address or not*/
 int isValidIpAddress(char *server_name)
 {
     struct sockaddr_in servaddr;
     int result = inet_pton(AF_INET,server_name,&(servaddr.sin_addr));
     return result !=0;
 }
+
+/* convert host name into ip address*/
 int hostname_to_ip(char *server_name, char *port_num, char *hostIp, char *recvline)
 {
     int     sockfd, n;
@@ -135,29 +145,41 @@ int hostname_to_ip(char *server_name, char *port_num, char *hostIp, char *recvli
     return 0;
 }
 
+/* convert ip address into host name*/
 int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *service, char *recvline)
 {
     
 
     int     sockfd, n;
-    socklen_t len;
     struct sockaddr_in servaddr; 
+    socklen_t len;
     len = sizeof(servaddr);
     int r;
+    inet_pton(AF_INET,server_name,&servaddr.sin_addr);
+    
+    /*convert Ip address to hostname*/
+    r=getnameinfo((struct sockaddr *)&servaddr,len, hostName, sizeof hostName, port_num,sizeof port_num, 0); 
+    printf("%s\n",hostName);
+    if (r)
+    {
+    printf("%s\n", gai_strerror(r));
+    exit(1);
+    }
+    
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(atoi(port_num));
     if ( (sockfd = socket(AF_INET,SOCK_STREAM,0))<0){
         printf("socket error\n");
         exit(1);
     }
-    inet_pton(AF_INET, server_name, &servaddr.sin_addr);
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(atoi(port_num));
-    
-    if(connect(sockfd, (struct sockaddr *)&servaddr,sizeof(servaddr))<0)
+    if(connect(sockfd, (struct sockaddr *)&servaddr,len)<0)
     {
        printf("connect error\n");
         exit(1); 
     }
+
+    
     while ( (n = read(sockfd, recvline, MAXLINE)) > 0) {
         recvline[n] = 0;        /* null terminate */
     }
@@ -165,19 +187,12 @@ int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *serv
         printf("read error\n");
         exit(1);
     }
-    /*convert Ip address to hostname*/
-    r=getnameinfo((struct sockaddr *) &servaddr,len, hostName, sizeof hostName, port_num,sizeof port_num, 0); 
-    if (r)
-    {
-    printf("%s\n", gai_strerror(r));
-    exit(1);
-    }
-    printf("%s\n",hostName);
+   
     return 0;
 }
 
 #if DEBUG
-int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *recvline)
+int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *service, char *recvline)
 {
     int     sockfd, n;
     struct sockaddr_in *servaddr; 
@@ -190,14 +205,21 @@ int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *recv
     memset(&hints,0,sizeof hints);
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    
+
     getaddrinfo(server_name,port_num, &hints, &res); 
     //if (inet_pton(AF_INET,argv[1], &servaddr.sin_addr) <= 0) {
     for(p= res;p!=NULL;p=p->ai_next)
     {
         servaddr = (struct sockaddr_in *)p->ai_addr;   
     }
-    getnameinfo((struct sockaddr *) &servaddr,len, hostName, sizeof hostName, port_num,sizeof port_num, 0);  
+    inet_pton(AF_INET,server_name,servaddr.sin_addr);
+    int r = getnameinfo((struct sockaddr *) &servaddr,len, hostName, sizeof hostName, port_num,sizeof port_num, 0);  
+    if (r)
+    {
+    printf("%s\n", gai_strerror(r));
+    exit(1);
+    }
+    printf("%s\n",hostName);
     if( (sockfd = socket(res->ai_family, res->ai_socktype,res->ai_protocol)) < 0) {
         printf("socket error\n");
         exit(1);
