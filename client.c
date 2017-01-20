@@ -13,20 +13,18 @@
 #define DAYTIME_PORT 3333
 #define DEBUG        0
 int isValidIpAddress(char*);
-int hostname_to_ip(char*,char*,char*,char*);
-int ip_to_hostname(char*,char*,char*,char*,char*);
+int hostname_to_ip(int, char*,char*,char*,char*);
+int ip_to_hostname(int, char*,char*,char*,char*,char*);
 int main(int argc, char **argv)
 {
-    char  recvline[MAXLINE + 1];
-    char *server_name = argv[1];
-    char *port_num = argv[2];
-    //char *tunnel_IP_Name;
-    //char *tunnel_port;
-    //tunnel_IP_Name = argv[3];
-    //tunnel_port = argv[4];
+    int  connfd = 0;
+    char recvline[MAXLINE + 1];
     char hostIp[MAXLINE];
     char hostName[MAXLINE];
     char service[MAXLINE];
+    char tunnelIp[MAXLINE];
+    char tunnelName[MAXLINE];
+    char tunnelService[MAXLINE];
 
 
     if (argc != 3 && argc != 5) {
@@ -36,10 +34,11 @@ int main(int argc, char **argv)
 
     /* No tunnel using case*/
     if (argc==3){
-
+        char *server_name = argv[1];
+        char *port_num = argv[2];
         /* hostname input case*/
         if(!isValidIpAddress(server_name)){
-        hostname_to_ip(server_name, port_num, hostIp, recvline);
+        hostname_to_ip(connfd, server_name, port_num, hostIp, recvline);
         printf("hostname:%s\nIpaddress:%s\n",server_name, hostIp);
         if (fputs(recvline, stdout) == EOF) {
             printf("fputs error\n");
@@ -50,7 +49,7 @@ int main(int argc, char **argv)
         /* ip input case*/
         else
         {
-            ip_to_hostname(server_name, port_num, hostName, service, recvline);
+            ip_to_hostname(connfd, server_name, port_num, hostName, service, recvline);
             printf("hostname:%s\nIpaddress:%s\n",hostName,server_name);
             if (fputs(recvline, stdout) == EOF) {
             printf("fputs error\n");
@@ -58,6 +57,29 @@ int main(int argc, char **argv)
         }
         }
    
+    }
+    else{
+        char *server_name = argv[3];
+        char *port_num = argv[4];
+        char *tunnel_name = argv[1];
+        char *tunnel_port = argv[2];
+        /* hostname input case*/
+        if(!isValidIpAddress(tunnel_name)){
+        hostname_to_ip(connfd, tunnel_name, tunnel_port, tunnelIp, recvline);
+        write(connfd,server_name, strlen(server_name));
+        write(connfd,port_num,strlen(port_num));
+        printf("Via tunnel:%s\ntunnel IP:%s\n",tunnel_name, tunnelIp);
+        }
+        /* ip input case*/
+        else
+        {
+            ip_to_hostname(connfd, tunnel_name, tunnel_port, tunnelName, tunnelService, recvline);
+            printf("Via tunnel:%s\ntunnel IP:%s\n",tunnelName,tunnel_name);
+            if (fputs(recvline, stdout) == EOF) {
+            printf("fputs error\n");
+            exit(1);
+        }
+        }
     }
     exit(0);
 }
@@ -106,9 +128,9 @@ int isValidIpAddress(char *server_name)
 }
 
 /* convert host name into ip address*/
-int hostname_to_ip(char *server_name, char *port_num, char *hostIp, char *recvline)
+int hostname_to_ip(int connfd, char *server_name, char *port_num, char *hostIp, char *recvline)
 {
-    int     sockfd, n;
+    int    sockfd, n;
     struct sockaddr_in *servaddr; 
     struct addrinfo hints, *res, *p;
     bzero(&servaddr, sizeof(servaddr));
@@ -142,15 +164,16 @@ int hostname_to_ip(char *server_name, char *port_num, char *hostIp, char *recvli
         exit(1);
     }
     freeaddrinfo(res);
+    connfd = sockfd;
     return 0;
 }
 
 /* convert ip address into host name*/
-int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *service, char *recvline)
+int ip_to_hostname(int connfd, char *server_name, char *port_num, char *hostName, char *service, char *recvline)
 {
     
 
-    int     sockfd, n;
+    int    sockfd, n;
     struct sockaddr_in servaddr; 
     socklen_t len;
     len = sizeof(servaddr);
@@ -187,7 +210,7 @@ int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *serv
         printf("read error\n");
         exit(1);
     }
-   
+    connfd = sockfd;
     return 0;
 }
 
