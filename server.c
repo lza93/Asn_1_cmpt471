@@ -50,7 +50,7 @@ int main(int argc, char **argv)
         ticks = time(NULL);
         snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
         write(connfd, buff, strlen(buff));
-        printf("client address: %s\n", inet_ntoa(clientaddr.sin_addr));
+        printf("request address: %s\n", inet_ntoa(clientaddr.sin_addr));
         //convert IP into a hostname
         //getnameinfo()
         //printf("client host name:%s\n",)

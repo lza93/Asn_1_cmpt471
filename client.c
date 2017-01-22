@@ -19,12 +19,10 @@ int main(int argc, char **argv)
 {
     int  connfd = 0;
     char recvline[MAXLINE + 1];
-    char hostIp[MAXLINE];
-    char hostName[MAXLINE];
+    char ip[MAXLINE];
+    char name[MAXLINE];
     char service[MAXLINE];
-    char tunnelIp[MAXLINE];
-    char tunnelName[MAXLINE];
-    char tunnelService[MAXLINE];
+    
 
 
     if (argc != 3 && argc != 5) {
@@ -38,8 +36,8 @@ int main(int argc, char **argv)
         char *port_num = argv[2];
         /* hostname input case*/
         if(!isValidIpAddress(server_name)){
-        hostname_to_ip(connfd, server_name, port_num, hostIp, recvline);
-        printf("hostname:%s\nIpaddress:%s\n",server_name, hostIp);
+        hostname_to_ip(connfd, server_name, port_num, ip, recvline);
+        printf("hostname:%s\nIpaddress:%s\n",server_name, ip);
         if (fputs(recvline, stdout) == EOF) {
             printf("fputs error\n");
             exit(1);
@@ -49,8 +47,8 @@ int main(int argc, char **argv)
         /* ip input case*/
         else
         {
-            ip_to_hostname(connfd, server_name, port_num, hostName, service, recvline);
-            printf("hostname:%s\nIpaddress:%s\n",hostName,server_name);
+            ip_to_hostname(connfd, server_name, port_num, name, service, recvline);
+            printf("hostname:%s\nIpaddress:%s\n",name,server_name);
             if (fputs(recvline, stdout) == EOF) {
             printf("fputs error\n");
             exit(1);
@@ -65,16 +63,16 @@ int main(int argc, char **argv)
         char *tunnel_port = argv[2];
         /* hostname input case*/
         if(!isValidIpAddress(tunnel_name)){
-        hostname_to_ip(connfd, tunnel_name, tunnel_port, tunnelIp, recvline);
-        write(connfd,server_name, strlen(server_name));
-        write(connfd,port_num,strlen(port_num));
-        printf("Via tunnel:%s\ntunnel IP:%s\n",tunnel_name, tunnelIp);
+        hostname_to_ip(connfd, tunnel_name, tunnel_port, ip, recvline);
+        write(connfd,server_name, sizeof server_name);
+        write(connfd,port_num, sizeof port_num);
+        printf("Via tunnel:%s\ntunnel IP:%s\n",tunnel_name, ip);
         }
         /* ip input case*/
         else
         {
-            ip_to_hostname(connfd, tunnel_name, tunnel_port, tunnelName, tunnelService, recvline);
-            printf("Via tunnel:%s\ntunnel IP:%s\n",tunnelName,tunnel_name);
+            ip_to_hostname(connfd, tunnel_name, tunnel_port, name, service, recvline);
+            printf("Via tunnel:%s\ntunnel IP:%s\n",name,tunnel_name);
             if (fputs(recvline, stdout) == EOF) {
             printf("fputs error\n");
             exit(1);
@@ -128,7 +126,7 @@ int isValidIpAddress(char *server_name)
 }
 
 /* convert host name into ip address*/
-int hostname_to_ip(int connfd, char *server_name, char *port_num, char *hostIp, char *recvline)
+int hostname_to_ip(int connfd, char *server_name, char *port_num, char *ip, char *recvline)
 {
     int    sockfd, n;
     struct sockaddr_in *servaddr; 
@@ -144,7 +142,7 @@ int hostname_to_ip(int connfd, char *server_name, char *port_num, char *hostIp, 
     for(p= res;p!=NULL;p=p->ai_next)
     {
         servaddr = (struct sockaddr_in *)p->ai_addr;
-        strcpy(hostIp, inet_ntoa(servaddr->sin_addr));
+        strcpy(ip, inet_ntoa(servaddr->sin_addr));
     }
     if( (sockfd = socket(res->ai_family, res->ai_socktype,res->ai_protocol)) < 0) {
         printf("socket error\n");
@@ -169,7 +167,7 @@ int hostname_to_ip(int connfd, char *server_name, char *port_num, char *hostIp, 
 }
 
 /* convert ip address into host name*/
-int ip_to_hostname(int connfd, char *server_name, char *port_num, char *hostName, char *service, char *recvline)
+int ip_to_hostname(int connfd, char *server_name, char *port_num, char *name, char *service, char *recvline)
 {
     
 
@@ -181,8 +179,8 @@ int ip_to_hostname(int connfd, char *server_name, char *port_num, char *hostName
     inet_pton(AF_INET,server_name,&servaddr.sin_addr);
     
     /*convert Ip address to hostname*/
-    r=getnameinfo((struct sockaddr *)&servaddr,len, hostName, sizeof hostName, port_num,sizeof port_num, 0); 
-    printf("%s\n",hostName);
+    r=getnameinfo((struct sockaddr *)&servaddr,len, name, sizeof name, port_num,sizeof port_num, 0); 
+    printf("%s\n",name);
     if (r)
     {
     printf("%s\n", gai_strerror(r));
@@ -215,7 +213,7 @@ int ip_to_hostname(int connfd, char *server_name, char *port_num, char *hostName
 }
 
 #if DEBUG
-int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *service, char *recvline)
+int ip_to_hostname(char *server_name, char *port_num, char *name, char *service, char *recvline)
 {
     int     sockfd, n;
     struct sockaddr_in *servaddr; 
@@ -236,7 +234,7 @@ int ip_to_hostname(char *server_name, char *port_num, char *hostName, char *serv
         servaddr = (struct sockaddr_in *)p->ai_addr;   
     }
     inet_pton(AF_INET,server_name,servaddr.sin_addr);
-    int r = getnameinfo((struct sockaddr *) &servaddr,len, hostName, sizeof hostName, port_num,sizeof port_num, 0);  
+    int r = getnameinfo((struct sockaddr *) &servaddr,len, name, sizeof name, port_num,sizeof port_num, 0);  
     if (r)
     {
     printf("%s\n", gai_strerror(r));
